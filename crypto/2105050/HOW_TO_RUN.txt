@@ -1,0 +1,186 @@
+CSE 406 Assignment 01 -- 2105050
+How to run, and what was tested
+================================================================
+
+All commands are run from inside the 2105050/ directory:
+
+    cd crypto/2105050
+
+
+----------------------------------------------------------------
+1. Generating the report (Task 1 part 5, Task 2 part 5)
+----------------------------------------------------------------
+
+    python3 2105050_report.py                 # prints to screen
+    python3 2105050_report.py > report.txt    # saves to report.txt
+
+This produces, in the exact layout of sampleio.png:
+  * AES / ECB section  -- key, plaintext, padded plaintext, ciphertext,
+                          deciphered text before and after unpadding, and
+                          key-schedule / encryption / decryption times
+  * AES / CBC section  -- same, with the IV as the first 16 bytes of ciphertext
+  * Diffie-Hellman     -- for each key size, all 5 individual trial timings
+                          for A, B and the shared key s, then their average;
+                          followed by a summary table of just the averages,
+                          in the layout the assignment asks for
+
+Test vector used (simple plaintext, as requested):
+    key       = "BUET CSE20 Batch"   (16 chars = 128 bits)
+    plaintext = "We need picnic"     (14 chars -> pads to 16 with 02 02)
+
+The DH table covers all three key sizes (128, 192, 256) by default and
+takes only a few seconds total now that P is generated as a safe prime
+(see section 5). Only if you want to skip k=256 entirely:
+
+    python3 2105050_report.py --quick
+
+2105050_report.py only reads 2105050_aes.py and 2105050_dh.py. It does not
+modify them, and it silences their internal debug prints so the report is clean.
+
+
+----------------------------------------------------------------
+2. Running the pieces individually
+----------------------------------------------------------------
+
+AES demo (CBC, prints all 11 round keys):
+
+    python3 2105050_aes.py
+
+Diffie-Hellman demo (one exchange + its own timing table for k=128,192,256):
+
+    python3 2105050_dh.py
+
+  This now finishes in a few seconds (measured: 7.6 s for all three key
+  sizes together). Prefer 2105050_report.py if you also want the per-trial
+  breakdown rather than just averages.
+
+
+----------------------------------------------------------------
+3. Running the socket cryptosystem (Task 3)
+----------------------------------------------------------------
+
+Two terminals, BOB first (he listens on port 65432):
+
+    Terminal 1:   python3 2105050_bob.py
+    Terminal 2:   python3 2105050_alice.py
+
+Alice sends ../sample_small.bmp (64x64 RGB, 12,342 bytes) -- make sure that
+file exists at that path (it currently doesn't; see NOT VERIFIED below).
+Expect roughly 2.5 minutes: about 65 s for Alice to encrypt and about 85 s
+for Bob to decrypt. The DH handshake itself is now sub-second; the AES
+pure-Python cost is what dominates (see section 6).
+
+If Bob fails with "OSError: [Errno 48] Address already in use", a previous
+Bob is still holding the port. Kill it first:
+
+    pkill -f 2105050_bob.py
+
+
+----------------------------------------------------------------
+4. What was actually tested (measured on this machine)
+----------------------------------------------------------------
+
+VERIFIED:
+  * AES ECB round-trip on "We need picnic"       -- recovered == original
+  * AES CBC round-trip on "We need picnic"       -- recovered == original
+  * AES CBC round-trip on a 12,342-byte BMP      -- byte-exact
+      encryption 64.6 s, decryption 84.9 s
+  * AES-192 and AES-256 round-trip (24-byte / 32-byte keys) -- byte-exact.
+    expand_key already generalises correctly (13 / 15 round keys as expected)
+    so Bonus Task 3 (larger AES keys) already works.
+  * DH shared secret agreement (s_Alice == s_Bob) at k = 128, 192 and 256,
+    asserted on every one of the 5 trials at each size -- 15 exchanges, all
+    of which agreed, all completing in seconds.
+  * Full Alice/Bob socket round-trip: DH handshake, AES-128 CBC encrypt on
+    Alice's side, transmit, AES-128 CBC decrypt on Bob's side. Output file
+    was byte-identical to the input (cmp reported no difference).
+  * Key schedule against the known AES-128 vector "Thats my Kung Fu":
+      Round 0 = 54 68 61 74 73 20 6d 79 20 4b 75 6e 67 20 46 75
+      Round 1 = e2 32 fc f1 91 12 91 88 b1 59 e4 e6 d6 79 a2 93
+    These match the published expansion, so the key schedule is correct.
+
+NOT VERIFIED / KNOWN GAPS:
+  * ../sample_small.bmp does not currently exist at that path (it was
+    renamed to final_sample_small.bmp outside this tooling). Either rename
+    it back, or point 2105050_alice.py's input_file at the new name --
+    that edit was intentionally left undone pending your say-so.
+  * The bonus ECB-vs-CBC image comparison is not implemented. Alice calls
+    cbc_encrypt only, so no ECB ciphertext image is produced, and there is
+    no side-by-side display anywhere in the codebase.
+
+
+----------------------------------------------------------------
+5. Diffie-Hellman now uses safe primes, no sympy
+----------------------------------------------------------------
+
+generate_prime(k) no longer draws an arbitrary random k-bit prime and then
+factors P-1 to find a generator. Instead it builds a SAFE PRIME directly:
+pick a random (k-1)-bit prime q (via a hand-rolled Miller-Rabin test, no
+sympy), then P = 2q + 1. If P also happens to be k bits and prime, keep it.
+
+Since P - 1 = 2q by construction, its only two prime factors are 2 and q --
+already known, no factoring required. generate_generator(P, q) tests a
+candidate g by checking g^2 != 1 (mod P) and g^q != 1 (mod P); if both hold,
+g generates the full group.
+
+This replaces the previous approach, which called sympy.factorint(P-1) on
+an arbitrary prime. That could take anywhere from milliseconds to tens of
+minutes at 256 bits depending on how many large prime factors P-1 happened
+to have (measured: only 4 of 12 random 256-bit primes factored within 20s in
+one test). One specific benchmark(256, trials=5) run under the old approach
+took 1983 s (33 minutes). Under the new approach, all of k=128, 192 and 256
+together (5-trial benchmark each) complete in about 8 seconds.
+
+The trade-off: safe primes are rarer than ordinary primes, so generate_prime
+itself does more failed attempts per success than a plain random-prime
+search would. In practice this cost is small next to the factoring cost it
+replaces.
+
+Also note: the assignment explicitly allows using a package (e.g. sympy) for
+prime/random generation -- switching to a hand-rolled Miller-Rabin was not
+required by the spec, but it is what the original 2105050_dh.py docstring
+recommended ("Miller-Rabin by hand is the point of the task"), and it also
+removes the sympy dependency entirely.
+
+
+----------------------------------------------------------------
+6. Why the AES timings look slow
+----------------------------------------------------------------
+
+Encryption of a single 16-byte block costs roughly 70-130 ms. mix_columns
+calls gf_mult 16 times per column, 4 columns per round, 9 rounds -- about
+576 gf_mult calls per block, each doing BitVector field arithmetic in pure
+Python.
+
+Caching gf_mult or precomputing a 256x256 multiplication table would speed
+this up by a large factor without changing the algorithm. This was left
+unimplemented on purpose.
+
+
+----------------------------------------------------------------
+7. Known spec-compliance gaps (not yet fixed, flagged for your decision)
+----------------------------------------------------------------
+
+  a) Task 1 item 1 requires handling keys of lengths other than 16/24/32
+     bytes ("you may pad or truncate -- justify your approach"). Currently
+     expand_key() just raises ValueError for any other length; there is no
+     pad/truncate path anywhere in 2105050_aes.py.
+
+  b) Task 2 says P must be at least k bits and Ka, Kb must ALSO be at least
+     k bits long. generate_private_public() draws
+     random.randint(2, P-2) uniformly, so the top bit is very often unset --
+     measured over 2000 draws at k=128, 90% of secrets came out shorter
+     than 128 bits (minimum observed: 117 bits). This does not break the
+     exchange (both sides still agree), but it does not meet the letter of
+     the spec's bit-length requirement.
+
+  c) make_public_params(key_size_bits, seed=123) takes a seed parameter but
+     never calls random.seed(seed) -- it looks reproducible but isn't. The
+     assignment says a fixed seed is optional, so this is not a hard
+     requirement, but the unused parameter is misleading as written.
+
+  d) Bonus 1 (ECB vs CBC image comparison) is not implemented anywhere, as
+     noted above.
+
+None of these have been changed. They are listed here so you can decide
+which, if any, to fix before submission.

@@ -1,0 +1,17 @@
+Yes — your instructor is asking you to be ready to explain, at viva, why ECB still shows the original image's outline while CBC looks like noise. We already have the answer, and it's demonstrated in the image I generated earlier:
+
+Why ECB leaks the outline:
+ECB (Electronic Codebook) encrypts each 16-byte block completely independently — same key, no chaining between blocks. So identical plaintext blocks always produce identical ciphertext blocks. Your test image is a flat-colored circle on a flat-colored background — long runs of identical pixel bytes. Every 16-byte chunk of "background blue" encrypts to the exact same ciphertext block every time it appears, and every chunk of "circle yellow/red" does the same. The large-scale structure (where the flat regions are) survives encryption, just relabeled to different colors — that's why you can still see the circle outline in the ECB output.
+
+Why CBC hides it:
+CBC (Cipher Block Chaining) XORs each plaintext block with the previous ciphertext block before encrypting. So even if two plaintext blocks are byte-for-byte identical, they produce different ciphertext, because each one is chained to whatever came before it. One block's output depends on everything upstream of it, so identical input regions no longer produce identical or even similarly-patterned output. The result looks like uniform random noise, with no visible structure.
+
+
+That key = "Thats my Kung Fu" is 16 characters (128 bits → AES-128). For the bonus, just swap it for a 24-character key (AES-192) or 32-character key (AES-256):
+
+
+key = "This is a 24-char key!!"   # 24 chars -> AES-192
+# or
+key = "This is exactly a 32 char key!!"  # 32 chars -> AES-256
+
+we have MODES in every files ; just chaning them is enuf to generate reports and all bonus tasks

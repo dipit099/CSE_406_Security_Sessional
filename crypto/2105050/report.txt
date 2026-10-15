@@ -1,0 +1,108 @@
+========================== AES / ECB ==========================
+
+Key:
+In ASCII: BUET CSE20 Batch
+In HEX: 42 55 45 54 20 43 53 45 32 30 20 42 61 74 63 68
+
+Plain Text:
+In ASCII: We need picnic
+In HEX: 57 65 20 6e 65 65 64 20 70 69 63 6e 69 63
+In ASCII (After Padding): We need picnic
+In HEX (After Padding): 57 65 20 6e 65 65 64 20 70 69 63 6e 69 63 02 02
+
+Ciphered Text:
+In HEX: 61 0a da 11 d5 42 e3 79 82 57 ec bd 9d 18 7a 6a
+In ASCII: a
+��B�y�W콝zj
+
+Deciphered Text:
+Before Unpadding:
+In HEX: 57 65 20 6e 65 65 64 20 70 69 63 6e 69 63 02 02
+In ASCII: We need picnic
+After Unpadding:
+In ASCII: We need picnic
+In HEX: 57 65 20 6e 65 65 64 20 70 69 63 6e 69 63
+
+Execution Time Details:
+Key Schedule Time: 0.019541941583156586 ms
+Encryption Time: 59.23395894933492 ms
+Decryption Time: 72.87054194603115 ms
+
+========================== AES / CBC ==========================
+
+Key:
+In ASCII: BUET CSE20 Batch
+In HEX: 42 55 45 54 20 43 53 45 32 30 20 42 61 74 63 68
+
+Plain Text:
+In ASCII: We need picnic
+In HEX: 57 65 20 6e 65 65 64 20 70 69 63 6e 69 63
+In ASCII (After Padding): We need picnic
+In HEX (After Padding): 57 65 20 6e 65 65 64 20 70 69 63 6e 69 63 02 02
+
+Ciphered Text:
+(IV is the first 16 bytes, followed by the actual ciphertext)
+In HEX: ee 0a 66 1f 8b 42 e0 7b 79 fa 12 59 10 32 4f 06 9d 7f ee 2b ef b8 36 24 a2 0a ba c7 fc 2a 14 7e
+In ASCII: �
+f�B�{y�Y2O��+�6$�
+���*~
+
+Deciphered Text:
+Before Unpadding:
+In HEX: 57 65 20 6e 65 65 64 20 70 69 63 6e 69 63 02 02
+In ASCII: We need picnic
+After Unpadding:
+In ASCII: We need picnic
+In HEX: 57 65 20 6e 65 65 64 20 70 69 63 6e 69 63
+
+Execution Time Details:
+Key Schedule Time: 0.01970806624740362 ms
+Encryption Time: 58.5680000949651 ms
+Decryption Time: 74.17237502522767 ms
+
+========================== Diffie-Hellman ==========================
+
+5 trials per key size. All times in milliseconds.
+Every trial asserts that Alice's and Bob's shared secrets are equal.
+
+k = 128
+  trial                  A               B      shared key s
+  --------------------------------------------------------
+  1               0.026000        0.022917          0.042125
+  2               0.021083        0.018250          0.036125
+  3               0.023625        0.021458          0.041458
+  4               0.027584        0.023750          0.041083
+  5               0.020458        0.020000          0.038250
+  --------------------------------------------------------
+  average         0.023750        0.021275          0.039808
+
+k = 192
+  trial                  A               B      shared key s
+  --------------------------------------------------------
+  1               0.046834        0.045666          0.089375
+  2               0.050417        0.047083          0.091416
+  3               0.048667        0.047083          0.093542
+  4               0.046916        0.046000          0.096584
+  5               0.050125        0.046041          0.091250
+  --------------------------------------------------------
+  average         0.048592        0.046375          0.092433
+
+k = 256
+  trial                  A               B      shared key s
+  --------------------------------------------------------
+  1               0.092709        0.089125          0.186458
+  2               0.090917        0.088542          0.177625
+  3               0.087208        0.083375          0.168042
+  4               0.087209        0.086125          0.176292
+  5               0.089125        0.086792          0.171042
+  --------------------------------------------------------
+  average         0.089434        0.086792          0.175892
+
+Summary (averages, as laid out in the assignment):
+
+k                      A               B      shared key s
+----------------------------------------------------------
+128             0.023750        0.021275          0.039808
+192             0.048592        0.046375          0.092433
+256             0.089434        0.086792          0.175892
+
